@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use arrow::{
-    array::{Array, BooleanArray, Int32Array, Int64Array, StringArray, UInt32Array, UInt64Array},
+    array::{BooleanArray, Int64Array, StringArray, UInt32Array, UInt64Array},
     datatypes::{DataType, Field, Schema, SchemaRef},
     record_batch::RecordBatch,
 };
@@ -10,64 +10,65 @@ use serde::{Deserialize, Serialize};
 
 // Define a struct that matches the Datastream2 log structure
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Datastream2Log {
-    timeIso8601: String,
-    timeEpoch: i64,
+    time_iso8601: String,
+    time_epoch: i64,
     trace_id: String,
-    cpCode: String,
-    akamaiResourceId: String,
-    EdgeRequestId: String,
-    edgeRequestId: String,
-    ARL: String,
+    cp_code: String,
+    akamai_resource_id: String,
+    edge_request_id: String,
+    edge_request_id_lower: String,
+    arl: String,
     method: String,
     scheme: String,
     host: String,
     path: String,
-    queryString: String,
-    clientIp: String,
-    clientPort: u32,
-    serverIp: String,
-    serverPort: u32,
+    query_string: String,
+    client_ip: String,
+    client_port: u32,
+    server_ip: String,
+    server_port: u32,
     status: u32,
     bytes: u64,
-    contentLength: u64,
-    timeToFirstByte: u32,
-    requestTimeMs: u32,
-    EdgeResponseTimeMs: u32,
-    EdgeStartTimestamp: String,
+    content_length: u64,
+    time_to_first_byte: u32,
+    request_time_ms: u32,
+    edge_response_time_ms: u32,
+    edge_start_timestamp: String,
     cachestatus: String,
-    TieredDistributionState: String,
-    sslProtocol: String,
-    sslCipher: String,
-    sslConnectionTimeMs: u32,
-    sslHandshakeTimeMs: u32,
+    tiered_distribution_state: String,
+    ssl_protocol: String,
+    ssl_cipher: String,
+    ssl_connection_time_ms: u32,
+    ssl_handshake_time_ms: u32,
     cookie: String,
-    setCookie: String,
+    set_cookie: String,
     referrer: String,
-    userAgent: String,
-    requestProtocol: String,
+    user_agent: String,
+    request_protocol: String,
     range: String,
-    requestId: String,
-    xForwardedFor: String,
-    customField: String,
-    kpField: String,
+    request_id: String,
+    x_forwarded_for: String,
+    custom_field: String,
+    kp_field: String,
     tag: String,
-    clientGeoCity: String,
-    clientGeoCountry: String,
-    clientGeoIsp: String,
-    clientGeoAsn: String,
-    serverGeoCity: String,
-    serverGeoCountry: String,
-    serverGeoIsp: String,
-    serverGeoAsn: String,
-    TotalUdpPackets: u32,
-    TotalUdpBytes: u32,
-    httpLastmileRttMs: u32,
-    clientRttMs: u32,
-    hitsOverSsl: bool,
-    errorType: String,
-    errorDetail: String,
-    errorExtendedInfo: String,
+    client_geo_city: String,
+    client_geo_country: String,
+    client_geo_isp: String,
+    client_geo_asn: String,
+    server_geo_city: String,
+    server_geo_country: String,
+    server_geo_isp: String,
+    server_geo_asn: String,
+    total_udp_packets: u32,
+    total_udp_bytes: u32,
+    http_lastmile_rtt_ms: u32,
+    client_rtt_ms: u32,
+    hits_over_ssl: bool,
+    error_type: String,
+    error_detail: String,
+    error_extended_info: String,
 }
 
 // Function to create the Parquet schema
@@ -137,63 +138,63 @@ pub fn create_schema() -> SchemaRef {
 // Function to convert a Datastream2Log to a RecordBatch
 pub fn log_to_record_batch(log: &Datastream2Log, schema: SchemaRef) -> Result<RecordBatch> {
     // Create arrays for each field
-    let time_iso8601 = StringArray::from(vec![log.timeIso8601.clone()]);
-    let time_epoch = Int64Array::from(vec![log.timeEpoch]);
+    let time_iso8601 = StringArray::from(vec![log.time_iso8601.clone()]);
+    let time_epoch = Int64Array::from(vec![log.time_epoch]);
     let trace_id = StringArray::from(vec![log.trace_id.clone()]);
-    let cp_code = StringArray::from(vec![log.cpCode.clone()]);
-    let akamai_resource_id = StringArray::from(vec![log.akamaiResourceId.clone()]);
-    let edge_request_id = StringArray::from(vec![log.EdgeRequestId.clone()]);
-    let edge_request_id_lower = StringArray::from(vec![log.edgeRequestId.clone()]);
-    let arl = StringArray::from(vec![log.ARL.clone()]);
+    let cp_code = StringArray::from(vec![log.cp_code.clone()]);
+    let akamai_resource_id = StringArray::from(vec![log.akamai_resource_id.clone()]);
+    let edge_request_id = StringArray::from(vec![log.edge_request_id.clone()]);
+    let edge_request_id_lower = StringArray::from(vec![log.edge_request_id_lower.clone()]);
+    let arl = StringArray::from(vec![log.arl.clone()]);
     let method = StringArray::from(vec![log.method.clone()]);
     let scheme = StringArray::from(vec![log.scheme.clone()]);
     let host = StringArray::from(vec![log.host.clone()]);
     let path = StringArray::from(vec![log.path.clone()]);
-    let query_string = StringArray::from(vec![log.queryString.clone()]);
-    let client_ip = StringArray::from(vec![log.clientIp.clone()]);
-    let client_port = UInt32Array::from(vec![log.clientPort]);
-    let server_ip = StringArray::from(vec![log.serverIp.clone()]);
-    let server_port = UInt32Array::from(vec![log.serverPort]);
+    let query_string = StringArray::from(vec![log.query_string.clone()]);
+    let client_ip = StringArray::from(vec![log.client_ip.clone()]);
+    let client_port = UInt32Array::from(vec![log.client_port]);
+    let server_ip = StringArray::from(vec![log.server_ip.clone()]);
+    let server_port = UInt32Array::from(vec![log.server_port]);
     let status = UInt32Array::from(vec![log.status]);
     let bytes = UInt64Array::from(vec![log.bytes]);
-    let content_length = UInt64Array::from(vec![log.contentLength]);
-    let time_to_first_byte = UInt32Array::from(vec![log.timeToFirstByte]);
-    let request_time_ms = UInt32Array::from(vec![log.requestTimeMs]);
-    let edge_response_time_ms = UInt32Array::from(vec![log.EdgeResponseTimeMs]);
-    let edge_start_timestamp = StringArray::from(vec![log.EdgeStartTimestamp.clone()]);
+    let content_length = UInt64Array::from(vec![log.content_length]);
+    let time_to_first_byte = UInt32Array::from(vec![log.time_to_first_byte]);
+    let request_time_ms = UInt32Array::from(vec![log.request_time_ms]);
+    let edge_response_time_ms = UInt32Array::from(vec![log.edge_response_time_ms]);
+    let edge_start_timestamp = StringArray::from(vec![log.edge_start_timestamp.clone()]);
     let cachestatus = StringArray::from(vec![log.cachestatus.clone()]);
-    let tiered_distribution_state = StringArray::from(vec![log.TieredDistributionState.clone()]);
-    let ssl_protocol = StringArray::from(vec![log.sslProtocol.clone()]);
-    let ssl_cipher = StringArray::from(vec![log.sslCipher.clone()]);
-    let ssl_connection_time_ms = UInt32Array::from(vec![log.sslConnectionTimeMs]);
-    let ssl_handshake_time_ms = UInt32Array::from(vec![log.sslHandshakeTimeMs]);
+    let tiered_distribution_state = StringArray::from(vec![log.tiered_distribution_state.clone()]);
+    let ssl_protocol = StringArray::from(vec![log.ssl_protocol.clone()]);
+    let ssl_cipher = StringArray::from(vec![log.ssl_cipher.clone()]);
+    let ssl_connection_time_ms = UInt32Array::from(vec![log.ssl_connection_time_ms]);
+    let ssl_handshake_time_ms = UInt32Array::from(vec![log.ssl_handshake_time_ms]);
     let cookie = StringArray::from(vec![log.cookie.clone()]);
-    let set_cookie = StringArray::from(vec![log.setCookie.clone()]);
+    let set_cookie = StringArray::from(vec![log.set_cookie.clone()]);
     let referrer = StringArray::from(vec![log.referrer.clone()]);
-    let user_agent = StringArray::from(vec![log.userAgent.clone()]);
-    let request_protocol = StringArray::from(vec![log.requestProtocol.clone()]);
+    let user_agent = StringArray::from(vec![log.user_agent.clone()]);
+    let request_protocol = StringArray::from(vec![log.request_protocol.clone()]);
     let range = StringArray::from(vec![log.range.clone()]);
-    let request_id = StringArray::from(vec![log.requestId.clone()]);
-    let x_forwarded_for = StringArray::from(vec![log.xForwardedFor.clone()]);
-    let custom_field = StringArray::from(vec![log.customField.clone()]);
-    let kp_field = StringArray::from(vec![log.kpField.clone()]);
+    let request_id = StringArray::from(vec![log.request_id.clone()]);
+    let x_forwarded_for = StringArray::from(vec![log.x_forwarded_for.clone()]);
+    let custom_field = StringArray::from(vec![log.custom_field.clone()]);
+    let kp_field = StringArray::from(vec![log.kp_field.clone()]);
     let tag = StringArray::from(vec![log.tag.clone()]);
-    let client_geo_city = StringArray::from(vec![log.clientGeoCity.clone()]);
-    let client_geo_country = StringArray::from(vec![log.clientGeoCountry.clone()]);
-    let client_geo_isp = StringArray::from(vec![log.clientGeoIsp.clone()]);
-    let client_geo_asn = StringArray::from(vec![log.clientGeoAsn.clone()]);
-    let server_geo_city = StringArray::from(vec![log.serverGeoCity.clone()]);
-    let server_geo_country = StringArray::from(vec![log.serverGeoCountry.clone()]);
-    let server_geo_isp = StringArray::from(vec![log.serverGeoIsp.clone()]);
-    let server_geo_asn = StringArray::from(vec![log.serverGeoAsn.clone()]);
-    let total_udp_packets = UInt32Array::from(vec![log.TotalUdpPackets]);
-    let total_udp_bytes = UInt32Array::from(vec![log.TotalUdpBytes]);
-    let http_lastmile_rtt_ms = UInt32Array::from(vec![log.httpLastmileRttMs]);
-    let client_rtt_ms = UInt32Array::from(vec![log.clientRttMs]);
-    let hits_over_ssl = BooleanArray::from(vec![log.hitsOverSsl]);
-    let error_type = StringArray::from(vec![log.errorType.clone()]);
-    let error_detail = StringArray::from(vec![log.errorDetail.clone()]);
-    let error_extended_info = StringArray::from(vec![log.errorExtendedInfo.clone()]);
+    let client_geo_city = StringArray::from(vec![log.client_geo_city.clone()]);
+    let client_geo_country = StringArray::from(vec![log.client_geo_country.clone()]);
+    let client_geo_isp = StringArray::from(vec![log.client_geo_isp.clone()]);
+    let client_geo_asn = StringArray::from(vec![log.client_geo_asn.clone()]);
+    let server_geo_city = StringArray::from(vec![log.server_geo_city.clone()]);
+    let server_geo_country = StringArray::from(vec![log.server_geo_country.clone()]);
+    let server_geo_isp = StringArray::from(vec![log.server_geo_isp.clone()]);
+    let server_geo_asn = StringArray::from(vec![log.server_geo_asn.clone()]);
+    let total_udp_packets = UInt32Array::from(vec![log.total_udp_packets]);
+    let total_udp_bytes = UInt32Array::from(vec![log.total_udp_bytes]);
+    let http_lastmile_rtt_ms = UInt32Array::from(vec![log.http_lastmile_rtt_ms]);
+    let client_rtt_ms = UInt32Array::from(vec![log.client_rtt_ms]);
+    let hits_over_ssl = BooleanArray::from(vec![log.hits_over_ssl]);
+    let error_type = StringArray::from(vec![log.error_type.clone()]);
+    let error_detail = StringArray::from(vec![log.error_detail.clone()]);
+    let error_extended_info = StringArray::from(vec![log.error_extended_info.clone()]);
 
     // Create the record batch
     RecordBatch::try_new(
