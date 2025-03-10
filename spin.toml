@@ -31,3 +31,15 @@ allowed_outbound_hosts = []
 command = "cargo build --target wasm32-wasip1 --release"
 workdir = "ds2-parquet"
 watch = ["src/**/*.rs", "Cargo.toml"]
+
+[[trigger.http]]
+route = "/api/v1/upload/..."
+component = "s3-uploader"
+
+[component.s3-uploader]
+source = "s3-uploader/dist/s3-uploader.wasm"
+allowed_outbound_hosts = []
+
+[component.s3-uploader.build]
+command = "npm install && npm run build"
+workdir = "s3-uploader"
