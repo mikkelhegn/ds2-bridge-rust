@@ -1,0 +1,33 @@
+spin_manifest_version = 2
+
+[application]
+name = "ds2-bridge"
+version = "0.1.0"
+authors = ["Radu Matei <radu@fermyon.com>"]
+description = "A collection of serverless functions to process DataStream2 logs"
+
+[variables]
+# variables for accessing an S3-compatible storage
+s3_access_key_id = { required = true, secret = true }
+s3_secret_access_key = { required = true, secret = true }
+s3_region = { default = "nl-ams-1" }
+s3_endpoint = { default = "https://nl-ams-1.linodeobjects.com" }
+
+[[trigger.http]]
+# The route is a wildcard that matches any path under /api/v1/transform
+# and will be used to route requests to the ds2-parquet component
+route = "/api/v1/transform/..."
+component = "ds2-parquet"
+
+# The ds2-parquet component
+[component.ds2-parquet]
+# The Wasm component to instantiate and execute whenever a route that matches the request is hit
+source = "ds2-parquet/target/wasm32-wasip1/release/ds2_parquet.wasm"
+# The component does not make any outbound requests
+allowed_outbound_hosts = []
+
+# The build command to compile the component
+[component.ds2-parquet.build]
+command = "cargo build --target wasm32-wasip1 --release"
+workdir = "ds2-parquet"
+watch = ["src/**/*.rs", "Cargo.toml"]
