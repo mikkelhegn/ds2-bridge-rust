@@ -1,3 +1,5 @@
 main.wasm
 .spin/
 datastream2_*.json
+*.pq
+*.parquet

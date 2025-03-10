@@ -42,13 +42,13 @@ def generate_datastream_log():
         "timeIso8601": iso_time,
         "timeEpoch": int(now_ts),
         # IDs and references
-        "trace_id": random_trace_id(),
+        "traceId": random_trace_id(),
         "cpCode": str(random.randint(100000, 999999)),
         "akamaiResourceId": random_str(8),
-        "EdgeRequestId": random_str(12),
         "edgeRequestId": random_str(12),  # Some logs call it differently
+        "edgeRequestIdLower": random_str(12),  # Some logs call it differently
         # Request data
-        "ARL": f"{random.choice(['GET', 'POST', 'PUT', 'DELETE'])}://{random_str(6)}.example.com/{random_str(4)}",
+        "arl": f"{random.choice(['GET', 'POST', 'PUT', 'DELETE'])}://{random_str(6)}.example.com/{random_str(4)}",
         "method": random.choice(["GET", "POST", "PUT", "DELETE"]),
         "scheme": random.choice(["http", "https"]),
         "host": f"{random_str(6)}.example.com",
@@ -65,8 +65,8 @@ def generate_datastream_log():
         # Timing
         "timeToFirstByte": random.randint(1, 500),
         "requestTimeMs": random.randint(1, 2000),
-        "EdgeResponseTimeMs": random.randint(1, 2000),
-        "EdgeStartTimestamp": iso_time,
+        "edgeResponseTimeMs": random.randint(1, 2000),
+        "edgeStartTimestamp": iso_time,
         # Caching
         "cachestatus": random.choice(
             [
@@ -79,7 +79,7 @@ def generate_datastream_log():
                 "TCP_SWAPFAIL_MISS",
             ]
         ),
-        "TieredDistributionState": random.choice(["PARENT_HIT", "PARENT_MISS", "NONE"]),
+        "tieredDistributionState": random.choice(["PARENT_HIT", "PARENT_MISS", "NONE"]),
         # SSL / TLS
         "sslProtocol": random.choice(["TLSv1.2", "TLSv1.3"]),
         "sslCipher": random.choice(
@@ -113,8 +113,8 @@ def generate_datastream_log():
         "serverGeoIsp": random_str(6),
         "serverGeoAsn": str(random.randint(10000, 99999)),
         # UDP (rare for HTTP, but in spec)
-        "TotalUdpPackets": random.randint(0, 100),
-        "TotalUdpBytes": random.randint(0, 10000),
+        "totalUdpPackets": random.randint(0, 100),
+        "totalUdpBytes": random.randint(0, 10000),
         # Latency/RTT
         "httpLastmileRttMs": random.randint(0, 500),
         "clientRttMs": random.randint(0, 500),
