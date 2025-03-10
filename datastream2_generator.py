@@ -171,5 +171,5 @@ def generate_single():
 
 
 if __name__ == "__main__":
-    # main()
-    generate_single()
+    main()
+    # generate_single()

@@ -72,12 +72,62 @@ async fn transform_single(req: Request, _params: Params) -> Result<impl IntoResp
     Ok(response)
 }
 
-async fn transform_multiple(_req: Request, _params: Params) -> Result<impl IntoResponse> {
-    // This will be implemented in a future task
+async fn transform_multiple(req: Request, _params: Params) -> Result<impl IntoResponse> {
+    // Parse the request body as an array of Datastream2Logs
+    let body = req.body();
+    let logs: Vec<Datastream2Log> = serde_json::from_slice(body)
+        .map_err(|e| anyhow!("Failed to parse Datastream2 logs: {}", e))?;
+
+    if logs.is_empty() {
+        return Ok(Response::builder()
+            .status(400)
+            .header("Content-Type", "text/plain")
+            .body("No logs provided")
+            .build());
+    }
+
+    // Create the Parquet schema
+    let schema = ds2::create_schema();
+
+    // Create a buffer to hold the Parquet data
+    let mut buffer = Vec::new();
+    let cursor = Cursor::new(&mut buffer);
+
+    // Configure the Parquet writer properties
+    let props = WriterProperties::builder()
+        .set_compression(Compression::SNAPPY)
+        .set_writer_version(WriterVersion::PARQUET_2_0)
+        .build();
+
+    // Create the Parquet writer
+    let mut writer = ArrowWriter::try_new(cursor, schema.clone(), Some(props))
+        .map_err(|e| anyhow!("Failed to create Parquet writer: {}", e))?;
+
+    // Process each log and write to the Parquet file
+    for log in logs {
+        // Convert the log to a record batch
+        let batch = ds2::log_to_record_batch(&log, schema.clone())?;
+
+        // Write the record batch
+        writer
+            .write(&batch)
+            .map_err(|e| anyhow!("Failed to write record batch: {}", e))?;
+    }
+
+    // Close the writer and get the buffer
+    writer
+        .close()
+        .map_err(|e| anyhow!("Failed to close Parquet writer: {}", e))?;
+
+    // Return the Parquet data as the response
     let response = Response::builder()
-        .status(501)
-        .header("Content-Type", "text/plain")
-        .body("Not Implemented")
+        .status(200)
+        .header("Content-Type", "application/vnd.apache.parquet")
+        .header(
+            "Content-Disposition",
+            "attachment; filename=\"datastream2_multiple.parquet\"",
+        )
+        .body(buffer)
         .build();
 
     Ok(response)
