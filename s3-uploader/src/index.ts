@@ -5,11 +5,10 @@ import { AutoRouter } from 'itty-router';
 let router = AutoRouter();
 
 router
-    .get("/", () => new Response("hello universe"))
-    .get('/hello/:name', ({ name }) => `Hello, ${name}!`)
 
-    .post('api/v1/upload/:bucket/:file', async (req) => {
-        let { bucket, file } = req.params;
+    .post('/api/v1/upload/:file', async (req) => {
+        let { file } = req.params;
+        const bucket = Variables.get('s3_bucket') || '';
 
         let region = Variables.get('s3_region');
         let endpoint = Variables.get('s3_endpoint');
@@ -21,7 +20,6 @@ router
 
         let s3 = new S3Client({
             region,
-            endpoint,
             credentials: {
                 accessKeyId,
                 secretAccessKey
@@ -39,6 +37,7 @@ router
 
             await s3.send(command);
 
+            console.log(`File ${file} successfully uploaded with size ${body.byteLength}`);
             return new Response('File uploaded successfully', { status: 200 });
         } catch (error) {
             console.error('Error uploading file:', error);

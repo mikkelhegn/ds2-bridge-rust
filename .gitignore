@@ -3,3 +3,6 @@ main.wasm
 datastream2_*.json
 *.pq
 *.parquet
+.spin-aka/
+body.txt
+log.json

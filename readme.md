@@ -54,3 +54,15 @@ errorType                BINARY    S BB_     2524      0.29 B     0       "" / "
 errorDetail              BINARY    S BB_     2524      0.30 B     0       "" / "DNSFailure"
 errorExtendedInfo        BINARY    S BB_     2524      23.80 B    0       "02ln4UKgcrlej6mBmbL6" / "zxEz8emOboZHZDz4xO6q"
 ```
+
+### Configuring the S3 Uploader
+
+```bash
+export SPIN_VARIABLE_S3_BUCKET="<your-s3-bucket>"
+export SPIN_VARIABLE_S3_SECRET_ACCESS_KEY="<your-secret-access-key>"
+export SPIN_VARIABLE_S3_ACCESS_KEY_ID="<your-access-key-id>"
+export SPIN_VARIABLE_S3_REGION="<your-s3-region>"
+export SPIN_VARIABLE_S3_ENDPOINT="<your-s3-endpoint>"
+
+spin aka deploy --variable s3_bucket=$SPIN_VARIABLE_S3_BUCKET --variable s3_secret_access_key=$SPIN_VARIABLE_S3_SECRET_ACCESS_KEY --variable s3_access_key_id=$SPIN_VARIABLE_S3_ACCESS_KEY_ID --variable s3_region=$SPIN_VARIABLE_S3_REGION --variable s3_endpoint=$SPIN_VARIABLE_S3_ENDPOINT
+```

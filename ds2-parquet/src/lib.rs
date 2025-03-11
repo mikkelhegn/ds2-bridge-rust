@@ -1,12 +1,12 @@
 use anyhow::{anyhow, Result};
-use ds2::Datastream2Log;
+use ds2::extract_logs;
 use parquet::{
     arrow::ArrowWriter,
-    basic::Compression,
+    basic::{Compression, ZstdLevel},
     file::properties::{WriterProperties, WriterVersion},
 };
 use spin_sdk::{
-    http::{IntoResponse, Params, Request, Response, Router},
+    http::{IntoResponse, Method, Params, Request, Response, Router},
     http_component,
 };
 use std::io::Cursor;
@@ -16,75 +16,18 @@ mod ds2;
 #[http_component]
 fn handle_ds2_parquet(req: Request) -> Result<impl IntoResponse> {
     let mut router = Router::new();
-    router.post_async("/api/v1/transform/single/*", transform_single);
-    router.post_async("/api/v1/transform/multiple/*", transform_multiple);
+    router.post_async("/api/v1/transform/multiple/*", transform);
 
     Ok(router.handle(req))
 }
 
-async fn transform_single(req: Request, _params: Params) -> Result<impl IntoResponse> {
-    // Parse the request body as a Datastream2Log
-    let body = req.body();
-    let log: Datastream2Log = serde_json::from_slice(body)
-        .map_err(|e| anyhow!("Failed to parse Datastream2 log: {}", e))?;
+async fn transform(req: Request, _params: Params) -> Result<impl IntoResponse> {
+    let body_len = req.body().len();
 
-    // Create the Parquet schema
-    let schema = ds2::create_schema();
+    let start = chrono::Utc::now();
 
-    // Convert the log to a record batch
-    let batch = ds2::log_to_record_batch(&log, schema.clone())?;
-
-    // Create a buffer to hold the Parquet data
-    let mut buffer = Vec::new();
-    let cursor = Cursor::new(&mut buffer);
-
-    // Configure the Parquet writer properties
-    let props = WriterProperties::builder()
-        .set_compression(Compression::SNAPPY)
-        .set_writer_version(WriterVersion::PARQUET_2_0)
-        .build();
-
-    // Create the Parquet writer
-    let mut writer = ArrowWriter::try_new(cursor, schema, Some(props))
-        .map_err(|e| anyhow!("Failed to create Parquet writer: {}", e))?;
-
-    // Write the record batch
-    writer
-        .write(&batch)
-        .map_err(|e| anyhow!("Failed to write record batch: {}", e))?;
-
-    // Close the writer and get the buffer
-    writer
-        .close()
-        .map_err(|e| anyhow!("Failed to close Parquet writer: {}", e))?;
-
-    // Return the Parquet data as the response using the builder pattern
-    let response = Response::builder()
-        .status(200)
-        .header("Content-Type", "application/vnd.apache.parquet")
-        .header(
-            "Content-Disposition",
-            "attachment; filename=\"datastream2.parquet\"",
-        )
-        .body(buffer)
-        .build();
-
-    Ok(response)
-}
-
-async fn transform_multiple(req: Request, _params: Params) -> Result<impl IntoResponse> {
-    // Parse the request body as an array of Datastream2Logs
-    let body = req.body();
-    let logs: Vec<Datastream2Log> = serde_json::from_slice(body)
-        .map_err(|e| anyhow!("Failed to parse Datastream2 logs: {}", e))?;
-
-    if logs.is_empty() {
-        return Ok(Response::builder()
-            .status(400)
-            .header("Content-Type", "text/plain")
-            .body("No logs provided")
-            .build());
-    }
+    let logs = extract_logs(req)?;
+    let logs_len = logs.len();
 
     // Create the Parquet schema
     let schema = ds2::create_schema();
@@ -95,7 +38,7 @@ async fn transform_multiple(req: Request, _params: Params) -> Result<impl IntoRe
 
     // Configure the Parquet writer properties
     let props = WriterProperties::builder()
-        .set_compression(Compression::SNAPPY)
+        .set_compression(Compression::ZSTD(ZstdLevel::default()))
         .set_writer_version(WriterVersion::PARQUET_2_0)
         .build();
 
@@ -119,16 +62,32 @@ async fn transform_multiple(req: Request, _params: Params) -> Result<impl IntoRe
         .close()
         .map_err(|e| anyhow!("Failed to close Parquet writer: {}", e))?;
 
-    // Return the Parquet data as the response
-    let response = Response::builder()
-        .status(200)
-        .header("Content-Type", "application/vnd.apache.parquet")
-        .header(
-            "Content-Disposition",
-            "attachment; filename=\"datastream2_multiple.parquet\"",
-        )
+    let file_name = format!("log-{}.parquet", start.format("%Y-%m-%d-%H-%M-%S"));
+    let request = Request::builder()
+        .method(Method::Post)
+        .uri(format!(
+            "https://s3-uploader.spin.internal/api/v1/upload/{}",
+            file_name
+        ))
         .body(buffer)
         .build();
+
+    let response: Response = spin_sdk::http::send(request).await?;
+
+    // If uploading to S3 did not return 200, log the error and return 500, so DS2 tries again
+    if *response.status() != 200 {
+        println!("Response: {:?}", response);
+        return Err(anyhow!("Failed to upload to S3"));
+    }
+
+    let end = chrono::Utc::now();
+    let duration = end - start;
+    let duration_ms = duration.num_milliseconds();
+
+    println!(
+        "Processed {} logs (request size: {} bytes) in {} ms, file name: {}",
+        logs_len, body_len, duration_ms, file_name
+    );
 
     Ok(response)
 }
