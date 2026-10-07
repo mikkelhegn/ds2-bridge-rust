@@ -54,12 +54,13 @@ impl HttpConnector for WasiHttpClient {
         let method = req.method().to_string();
         let headers = req.headers().clone();
         let body_bytes = req.body().bytes().unwrap_or_default().to_vec();
+        let body_len = body_bytes.len();
 
         tracing::debug!(
             "AWS HTTP request: {} {} (body size: {} bytes)",
             method,
             uri,
-            body_bytes.len()
+            body_len
         );
 
         // Log request headers for debugging auth issues
@@ -96,10 +97,12 @@ impl HttpConnector for WasiHttpClient {
                 request_builder = request_builder.header(name, value);
             }
 
-            // Use FullBody for binary data (Parquet files are binary)
-            tracing::debug!("Building HTTP request with {} bytes of body data", body_bytes.len());
+            // Use FullBody for binary data (Parquet files are binary).
+            // Move body_bytes directly into the request instead of cloning it -
+            // for large Parquet uploads a clone here would double peak memory usage.
+            tracing::debug!("Building HTTP request with {} bytes of body data", body_len);
 
-            let body_data: bytes::Bytes = body_bytes.clone().into();
+            let body_data: bytes::Bytes = body_bytes.into();
             let http_request = request_builder
                 .body(FullBody::new(body_data))
                 .map_err(|e| {
@@ -108,14 +111,14 @@ impl HttpConnector for WasiHttpClient {
                 })?;
 
             tracing::debug!("Sending {} request to {} with {} headers and {} bytes body",
-                method, uri, headers.len(), body_bytes.len());
+                method, uri, headers.len(), body_len);
 
             let response: Response = http::send(http_request)
                 .await
                 .map_err(|e| {
                     tracing::error!("Failed to send HTTP request to {}: {:?}", uri, e);
                     tracing::error!("Request details - Method: {}, Headers count: {}, Body size: {} bytes",
-                        method, headers.len(), body_bytes.len());
+                        method, headers.len(), body_len);
                     ConnectorError::other(format!("Failed to send request: {:?}", e).into(), None)
                 })?;
 

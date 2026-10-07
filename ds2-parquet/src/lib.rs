@@ -73,23 +73,24 @@ async fn transform(req: Request) -> Result<String> {
     // Configure the Parquet writer properties
     let props = WriterProperties::builder()
         .set_compression(Compression::ZSTD(ZstdLevel::default()))
-        .set_writer_version(WriterVersion::PARQUET_2_0)
+        // PARQUET_2_0 enables delta encoders (e.g. DeltaBitPackEncoder for ints) that each
+        // eagerly allocate a hardcoded 1MB buffer (BitWriter::new(DEFAULT_BIT_WRITER_SIZE)),
+        // regardless of any WriterProperties page-size setting. With 61 columns that alone
+        // accounted for ~125MB of peak memory on wasm32. PARQUET_1_0's PLAIN/RLE_DICTIONARY
+        // encoders grow their buffers lazily instead.
+        .set_writer_version(WriterVersion::PARQUET_1_0)
         .build();
 
     // Create the Parquet writer
     let mut writer = ArrowWriter::try_new(cursor, schema.clone(), Some(props))
         .map_err(|e| anyhow!("Failed to create Parquet writer: {}", e))?;
 
-    // Process each log and write to the Parquet file
-    for log in logs {
-        // Convert the log to a record batch
-        let batch = ds2::log_to_record_batch(&log, schema.clone())?;
+    // Convert all logs into a single columnar record batch and write it once
+    let batch = ds2::logs_to_record_batch(&logs, schema)?;
 
-        // Write the record batch
-        writer
-            .write(&batch)
-            .map_err(|e| anyhow!("Failed to write record batch: {}", e))?;
-    }
+    writer
+        .write(&batch)
+        .map_err(|e| anyhow!("Failed to write record batch: {}", e))?;
 
     // Close the writer and get the buffer
     writer

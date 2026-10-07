@@ -144,91 +144,183 @@ pub fn create_schema() -> SchemaRef {
     Arc::new(schema)
 }
 
-// Function to convert an AkamaiLog to a RecordBatch
-pub fn log_to_record_batch(log: &Datastream2Log, schema: SchemaRef) -> Result<RecordBatch> {
-    // Create arrays for each field
-    let version = Int64Array::from(vec![log
-        .version
-        .as_ref()
-        .and_then(|v| v.parse::<i64>().ok())]);
-    let is_midgress = StringArray::from(vec![log.is_midgress.clone().unwrap_or_default()]);
-    let stream_id = StringArray::from(vec![log.stream_id.clone().unwrap_or_default()]);
-    let cp = StringArray::from(vec![log.cp.clone().unwrap_or_default()]);
-    let req_id = StringArray::from(vec![log.req_id.clone().unwrap_or_default()]);
-    let req_time_sec = StringArray::from(vec![log.req_time_sec.clone().unwrap_or_default()]);
-    let edge_attempts = StringArray::from(vec![log.edge_attempts.clone().unwrap_or_default()]);
-    let bytes = StringArray::from(vec![log.bytes.clone().unwrap_or_default()]);
-    let cli_ip = StringArray::from(vec![log.cli_ip.clone().unwrap_or_default()]);
-    let status_code = StringArray::from(vec![log.status_code.clone().unwrap_or_default()]);
-    let proto = StringArray::from(vec![log.proto.clone().unwrap_or_default()]);
-    let req_host = StringArray::from(vec![log.req_host.clone().unwrap_or_default()]);
-    let req_method = StringArray::from(vec![log.req_method.clone().unwrap_or_default()]);
-    let req_path = StringArray::from(vec![log.req_path.clone().unwrap_or_default()]);
-    let req_port = StringArray::from(vec![log.req_port.clone().unwrap_or_default()]);
-    let rsp_content_len = StringArray::from(vec![log.rsp_content_len.clone().unwrap_or_default()]);
-    let rsp_content_type =
-        StringArray::from(vec![log.rsp_content_type.clone().unwrap_or_default()]);
-    let ua = StringArray::from(vec![log.ua.clone().unwrap_or_default()]);
-    let tls_overhead_time_m_sec = StringArray::from(vec![log
-        .tls_overhead_time_m_sec
-        .clone()
-        .unwrap_or_default()]);
-    let tls_version = StringArray::from(vec![log.tls_version.clone().unwrap_or_default()]);
-    let obj_size = StringArray::from(vec![log.obj_size.clone().unwrap_or_default()]);
-    let uncompressed_size =
-        StringArray::from(vec![log.uncompressed_size.clone().unwrap_or_default()]);
-    let overhead_bytes = StringArray::from(vec![log.overhead_bytes.clone().unwrap_or_default()]);
-    let total_bytes = StringArray::from(vec![log.total_bytes.clone().unwrap_or_default()]);
-    let query_str = StringArray::from(vec![log.query_str.clone().unwrap_or_default()]);
-    let file_size_bucket =
-        StringArray::from(vec![log.file_size_bucket.clone().unwrap_or_default()]);
-    let brotli_status = StringArray::from(vec![log.brotli_status.clone().unwrap_or_default()]);
-    let origin_content_len =
-        StringArray::from(vec![log.origin_content_len.clone().unwrap_or_default()]);
-    let early_hints = StringArray::from(vec![log.early_hints.clone().unwrap_or_default()]);
-    let edge_ip_binding = StringArray::from(vec![log.edge_ip_binding.clone().unwrap_or_default()]);
-    let acc_lang = StringArray::from(vec![log.acc_lang.clone().unwrap_or_default()]);
-    let cookie = StringArray::from(vec![log.cookie.clone().unwrap_or_default()]);
-    let range = StringArray::from(vec![log.range.clone().unwrap_or_default()]);
-    let referer = StringArray::from(vec![log.referer.clone().unwrap_or_default()]);
-    let x_forwarded_for = StringArray::from(vec![log.x_forwarded_for.clone().unwrap_or_default()]);
-    let max_age_sec = StringArray::from(vec![log.max_age_sec.clone().unwrap_or_default()]);
-    let req_end_time_m_sec =
-        StringArray::from(vec![log.req_end_time_m_sec.clone().unwrap_or_default()]);
-    let error_code = StringArray::from(vec![log.error_code.clone().unwrap_or_default()]);
-    let turn_around_time_m_sec =
-        StringArray::from(vec![log.turn_around_time_m_sec.clone().unwrap_or_default()]);
-    let transfer_time_m_sec =
-        StringArray::from(vec![log.transfer_time_m_sec.clone().unwrap_or_default()]);
-    let dns_lookup_time_m_sec =
-        StringArray::from(vec![log.dns_lookup_time_m_sec.clone().unwrap_or_default()]);
-    let last_byte = StringArray::from(vec![log.last_byte.clone().unwrap_or_default()]);
-    let asn = StringArray::from(vec![log.asn.clone().unwrap_or_default()]);
-    let time_to_first_byte =
-        StringArray::from(vec![log.time_to_first_byte.clone().unwrap_or_default()]);
-    let startup_error = StringArray::from(vec![log.startup_error.clone().unwrap_or_default()]);
-    let download_time = StringArray::from(vec![log.download_time.clone().unwrap_or_default()]);
-    let throughput = StringArray::from(vec![log.throughput.clone().unwrap_or_default()]);
-    let prefetch_midgress_hits =
-        StringArray::from(vec![log.prefetch_midgress_hits.clone().unwrap_or_default()]);
-    let cache_status = StringArray::from(vec![log.cache_status.clone().unwrap_or_default()]);
-    let cacheable = StringArray::from(vec![log.cacheable.clone().unwrap_or_default()]);
-    let breadcrumbs = StringArray::from(vec![log.breadcrumbs.clone().unwrap_or_default()]);
-    let edge_ip = StringArray::from(vec![log.edge_ip.clone().unwrap_or_default()]);
-    let country = StringArray::from(vec![log.country.clone().unwrap_or_default()]);
-    let state = StringArray::from(vec![log.state.clone().unwrap_or_default()]);
-    let city = StringArray::from(vec![log.city.clone().unwrap_or_default()]);
-    let server_country = StringArray::from(vec![log.server_country.clone().unwrap_or_default()]);
-    let billing_region = StringArray::from(vec![log.billing_region.clone().unwrap_or_default()]);
-    let ew_usage_info = StringArray::from(vec![log.ew_usage_info.clone().unwrap_or_default()]);
-    let ew_execution_info =
-        StringArray::from(vec![log.ew_execution_info.clone().unwrap_or_default()]);
-    let content_protection = StringArray::from(vec![log
-        .content_protection_info
-        .clone()
-        .unwrap_or_default()]);
-    let custom_field = StringArray::from(vec![log.custom_field.clone().unwrap_or_default()]);
-    let security_rules = StringArray::from(vec![log.security_rules.clone().unwrap_or_default()]);
+// Function to convert a batch of logs into a single columnar RecordBatch
+pub fn logs_to_record_batch(logs: &[Datastream2Log], schema: SchemaRef) -> Result<RecordBatch> {
+    // Create arrays for each field, with one value per log
+    let version = Int64Array::from(
+        logs.iter()
+            .map(|log| log.version.as_ref().and_then(|v| v.parse::<i64>().ok()))
+            .collect::<Vec<_>>(),
+    );
+    let is_midgress =
+        StringArray::from(logs.iter().map(|log| log.is_midgress.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let stream_id =
+        StringArray::from(logs.iter().map(|log| log.stream_id.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let cp = StringArray::from(logs.iter().map(|log| log.cp.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let req_id =
+        StringArray::from(logs.iter().map(|log| log.req_id.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let req_time_sec =
+        StringArray::from(logs.iter().map(|log| log.req_time_sec.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let edge_attempts = StringArray::from(
+        logs.iter().map(|log| log.edge_attempts.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let bytes =
+        StringArray::from(logs.iter().map(|log| log.bytes.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let cli_ip =
+        StringArray::from(logs.iter().map(|log| log.cli_ip.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let status_code = StringArray::from(
+        logs.iter().map(|log| log.status_code.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let proto =
+        StringArray::from(logs.iter().map(|log| log.proto.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let req_host =
+        StringArray::from(logs.iter().map(|log| log.req_host.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let req_method = StringArray::from(
+        logs.iter().map(|log| log.req_method.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let req_path =
+        StringArray::from(logs.iter().map(|log| log.req_path.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let req_port =
+        StringArray::from(logs.iter().map(|log| log.req_port.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let rsp_content_len = StringArray::from(
+        logs.iter().map(|log| log.rsp_content_len.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let rsp_content_type = StringArray::from(
+        logs.iter().map(|log| log.rsp_content_type.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let ua = StringArray::from(logs.iter().map(|log| log.ua.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let tls_overhead_time_m_sec = StringArray::from(
+        logs.iter()
+            .map(|log| log.tls_overhead_time_m_sec.as_deref().unwrap_or(""))
+            .collect::<Vec<_>>(),
+    );
+    let tls_version = StringArray::from(
+        logs.iter().map(|log| log.tls_version.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let obj_size =
+        StringArray::from(logs.iter().map(|log| log.obj_size.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let uncompressed_size = StringArray::from(
+        logs.iter().map(|log| log.uncompressed_size.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let overhead_bytes = StringArray::from(
+        logs.iter().map(|log| log.overhead_bytes.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let total_bytes = StringArray::from(
+        logs.iter().map(|log| log.total_bytes.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let query_str = StringArray::from(
+        logs.iter().map(|log| log.query_str.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let file_size_bucket = StringArray::from(
+        logs.iter().map(|log| log.file_size_bucket.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let brotli_status = StringArray::from(
+        logs.iter().map(|log| log.brotli_status.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let origin_content_len = StringArray::from(
+        logs.iter().map(|log| log.origin_content_len.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let early_hints = StringArray::from(
+        logs.iter().map(|log| log.early_hints.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let edge_ip_binding = StringArray::from(
+        logs.iter().map(|log| log.edge_ip_binding.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let acc_lang = StringArray::from(
+        logs.iter().map(|log| log.acc_lang.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let cookie =
+        StringArray::from(logs.iter().map(|log| log.cookie.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let range =
+        StringArray::from(logs.iter().map(|log| log.range.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let referer =
+        StringArray::from(logs.iter().map(|log| log.referer.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let x_forwarded_for = StringArray::from(
+        logs.iter().map(|log| log.x_forwarded_for.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let max_age_sec = StringArray::from(
+        logs.iter().map(|log| log.max_age_sec.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let req_end_time_m_sec = StringArray::from(
+        logs.iter().map(|log| log.req_end_time_m_sec.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let error_code = StringArray::from(
+        logs.iter().map(|log| log.error_code.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let turn_around_time_m_sec = StringArray::from(
+        logs.iter()
+            .map(|log| log.turn_around_time_m_sec.as_deref().unwrap_or(""))
+            .collect::<Vec<_>>(),
+    );
+    let transfer_time_m_sec = StringArray::from(
+        logs.iter().map(|log| log.transfer_time_m_sec.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let dns_lookup_time_m_sec = StringArray::from(
+        logs.iter()
+            .map(|log| log.dns_lookup_time_m_sec.as_deref().unwrap_or(""))
+            .collect::<Vec<_>>(),
+    );
+    let last_byte = StringArray::from(
+        logs.iter().map(|log| log.last_byte.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let asn = StringArray::from(logs.iter().map(|log| log.asn.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let time_to_first_byte = StringArray::from(
+        logs.iter().map(|log| log.time_to_first_byte.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let startup_error = StringArray::from(
+        logs.iter().map(|log| log.startup_error.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let download_time = StringArray::from(
+        logs.iter().map(|log| log.download_time.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let throughput = StringArray::from(
+        logs.iter().map(|log| log.throughput.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let prefetch_midgress_hits = StringArray::from(
+        logs.iter()
+            .map(|log| log.prefetch_midgress_hits.as_deref().unwrap_or(""))
+            .collect::<Vec<_>>(),
+    );
+    let cache_status = StringArray::from(
+        logs.iter().map(|log| log.cache_status.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let cacheable = StringArray::from(
+        logs.iter().map(|log| log.cacheable.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let breadcrumbs = StringArray::from(
+        logs.iter().map(|log| log.breadcrumbs.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let edge_ip =
+        StringArray::from(logs.iter().map(|log| log.edge_ip.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let country =
+        StringArray::from(logs.iter().map(|log| log.country.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let state =
+        StringArray::from(logs.iter().map(|log| log.state.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let city =
+        StringArray::from(logs.iter().map(|log| log.city.as_deref().unwrap_or("")).collect::<Vec<_>>());
+    let server_country = StringArray::from(
+        logs.iter().map(|log| log.server_country.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let billing_region = StringArray::from(
+        logs.iter().map(|log| log.billing_region.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let ew_usage_info = StringArray::from(
+        logs.iter().map(|log| log.ew_usage_info.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let ew_execution_info = StringArray::from(
+        logs.iter().map(|log| log.ew_execution_info.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let content_protection = StringArray::from(
+        logs.iter()
+            .map(|log| log.content_protection_info.as_deref().unwrap_or(""))
+            .collect::<Vec<_>>(),
+    );
+    let custom_field = StringArray::from(
+        logs.iter().map(|log| log.custom_field.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
+    let security_rules = StringArray::from(
+        logs.iter().map(|log| log.security_rules.as_deref().unwrap_or("")).collect::<Vec<_>>(),
+    );
 
     // Create the record batch
     RecordBatch::try_new(

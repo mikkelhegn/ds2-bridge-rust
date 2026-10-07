@@ -23,13 +23,13 @@ component = "ds2-parquet"
 # The ds2-parquet component
 [component.ds2-parquet]
 # The Wasm component to instantiate and execute whenever a route that matches the request is hit
-source = "ds2-parquet/target/wasm32-wasip1/release/ds2_parquet.wasm"
+source = "ds2-parquet/target/wasm32-wasip2/release/ds2_parquet.wasm"
 # Allow outbound requests to S3
 allowed_outbound_hosts = ["https://us-iad-18.linodeobjects.com"]
 
 # The build command to compile the component
 [component.ds2-parquet.build]
-command = "cargo build --target wasm32-wasip1 --release"
+command = "cargo build --target wasm32-wasip2 --release"
 workdir = "ds2-parquet"
 watch = ["src/**/*.rs", "Cargo.toml"]
 
