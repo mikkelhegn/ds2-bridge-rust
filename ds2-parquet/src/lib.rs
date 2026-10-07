@@ -1,32 +1,66 @@
 use anyhow::{anyhow, Result};
+use aws_credential_types::Credentials;
+use aws_sdk_s3::config::{BehaviorVersion, Region};
+use aws_sdk_s3::primitives::ByteStream;
+use aws_sdk_s3::Client as S3Client;
+use aws_smithy_async::rt::sleep::SharedAsyncSleep;
+use aws_smithy_async::time::SharedTimeSource;
 use ds2::extract_logs;
 use parquet::{
     arrow::ArrowWriter,
     basic::{Compression, ZstdLevel},
     file::properties::{WriterProperties, WriterVersion},
 };
-use spin_sdk::{
-    http::{IntoResponse, Method, Params, Request, Response, Router},
-    http_component,
-};
+use spin_sdk::http::body::IncomingBodyExt;
+use spin_sdk::http::{IntoResponse, Request};
+use spin_sdk::http_service;
+use spin_sdk::variables;
 use std::io::Cursor;
+use http;
 
+use crate::aws::{WasiHttpClient, WasiNow, WasiSleep};
+
+mod aws;
 mod ds2;
 
-#[http_component]
-fn handle_ds2_parquet(req: Request) -> Result<impl IntoResponse> {
-    let mut router = Router::new();
-    router.post_async("/api/v1/transform/multiple/*", transform);
+#[http_service]
+async fn handle_ds2_parquet(req: Request) -> Result<impl IntoResponse> {
+    let _ = tracing_subscriber::fmt()
+        .with_writer(std::io::stdout)
+        .try_init();
 
-    Ok(router.handle(req))
+    // Check if it's a POST request
+    if req.method() != http::Method::POST {
+        return Ok(http::Response::builder()
+            .status(405)
+            .header("Allow", "POST")
+            .body("Method not allowed".to_string())
+            .unwrap());
+    }
+
+    // Check if path starts with /api/v1/transform/multiple/
+    if !req.uri().path().starts_with("/api/v1/transform/multiple") {
+        return Ok(http::Response::builder()
+            .status(404)
+            .body("Path not found".to_string())
+            .unwrap());
+    }
+
+    // Forward to transform function
+    let result = transform(req).await?;
+    Ok(http::Response::builder()
+        .status(200)
+        .body(result)
+        .unwrap())
 }
 
-async fn transform(req: Request, _params: Params) -> Result<impl IntoResponse> {
-    let body_len = req.body().len();
+async fn transform(req: Request) -> Result<String> {
+    let body_bytes = req.into_body().bytes().await?;
+    let body_len = body_bytes.len();
 
     let start = chrono::Utc::now();
 
-    let logs = extract_logs(req)?;
+    let logs = extract_logs(&body_bytes)?;
     let logs_len = logs.len();
 
     // Create the Parquet schema
@@ -63,31 +97,64 @@ async fn transform(req: Request, _params: Params) -> Result<impl IntoResponse> {
         .map_err(|e| anyhow!("Failed to close Parquet writer: {}", e))?;
 
     let file_name = format!("log-{}.parquet", start.format("%Y-%m-%d-%H-%M-%S"));
-    let request = Request::builder()
-        .method(Method::Post)
-        .uri(format!(
-            "https://s3-uploader.spin.internal/api/v1/upload/{}",
-            file_name
-        ))
-        .body(buffer)
+
+    // Get S3 configuration from Spin variables
+    let bucket = variables::get("s3_bucket").await?;
+    let region = variables::get("s3_region").await?;
+    let endpoint = variables::get("s3_endpoint").await?;
+    let access_key_id = variables::get("s3_access_key_id").await?;
+    let secret_access_key = variables::get("s3_secret_access_key").await?;
+
+    // Build S3 client with custom WASI implementations
+    let credentials = Credentials::new(
+        access_key_id,
+        secret_access_key,
+        None,
+        None,
+        "spin-variables",
+    );
+
+    let s3_config = aws_sdk_s3::Config::builder()
+        .behavior_version(BehaviorVersion::latest())
+        .credentials_provider(credentials)
+        .region(Region::new(region))
+        .endpoint_url(&endpoint)
+        .force_path_style(true)
+        .http_client(WasiHttpClient)
+        .sleep_impl(SharedAsyncSleep::new(WasiSleep))
+        .time_source(SharedTimeSource::new(WasiNow))
         .build();
 
-    let response: Response = spin_sdk::http::send(request).await?;
+    let s3_client = S3Client::from_conf(s3_config);
 
-    // If uploading to S3 did not return 200, log the error and return 500, so DS2 tries again
-    if *response.status() != 200 {
-        println!("Response: {:?}", response);
-        return Err(anyhow!("Failed to upload to S3"));
+    // Upload to S3
+    tracing::info!("Uploading {} bytes to S3 bucket: {}, key: {}", buffer.len(), bucket, file_name);
+    let body = ByteStream::from(buffer);
+
+    match s3_client
+        .put_object()
+        .bucket(&bucket)
+        .key(&file_name)
+        .content_type("application/vnd.apache.parquet")
+        .body(body)
+        .send()
+        .await
+    {
+        Ok(_) => tracing::info!("Successfully uploaded to S3"),
+        Err(e) => {
+            tracing::error!("S3 upload error details: {:?}", e);
+            return Err(anyhow!("Failed to upload to S3: {}", e));
+        }
     }
 
     let end = chrono::Utc::now();
     let duration = end - start;
     let duration_ms = duration.num_milliseconds();
 
-    println!(
-        "Processed {} logs (request size: {} bytes) in {} ms, file name: {}",
+    tracing::info!(
+        "Processed {} logs (request size: {} bytes) in {} ms, uploaded to S3: {}",
         logs_len, body_len, duration_ms, file_name
     );
 
-    Ok(response)
+    Ok("File uploaded successfully".to_string())
 }

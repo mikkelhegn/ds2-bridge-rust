@@ -1,13 +1,11 @@
-use std::sync::Arc;
-
 use anyhow::{anyhow, Result};
+use std::sync::Arc;
 use arrow::{
     array::{Int64Array, StringArray},
     datatypes::{DataType, Field, Schema, SchemaRef},
     record_batch::RecordBatch,
 };
 use serde::{Deserialize, Serialize};
-use spin_sdk::http::Request;
 
 // Define a struct that matches the Akamai log structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -303,9 +301,9 @@ pub fn log_to_record_batch(log: &Datastream2Log, schema: SchemaRef) -> Result<Re
     .map_err(|e| anyhow!("Failed to create record batch: {}", e))
 }
 
-pub fn extract_logs(req: Request) -> Result<Vec<Datastream2Log>> {
+pub fn extract_logs(body_bytes: &[u8]) -> Result<Vec<Datastream2Log>> {
     // The request body from DataStream2 is a new-line-separated list of JSON objects of type Datastream2Log.
-    let body = std::str::from_utf8(req.body())
+    let body = std::str::from_utf8(body_bytes)
         .map_err(|e| anyhow!("Failed to parse request body as UTF-8: {}", e))?;
 
     let mut logs = Vec::new();
