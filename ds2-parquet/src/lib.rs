@@ -38,8 +38,10 @@ async fn handle_ds2_parquet(req: Request) -> Result<impl IntoResponse> {
             .unwrap());
     }
 
-    // Check if path starts with /api/v1/transform/multiple/
-    if !req.uri().path().starts_with("/api/v1/transform/multiple") {
+    // Accept both /api/v1/transform/single and /api/v1/transform/multiple
+    let path = req.uri().path();
+    if !path.starts_with("/api/v1/transform/single") && !path.starts_with("/api/v1/transform/multiple")
+    {
         return Ok(http::Response::builder()
             .status(404)
             .body("Path not found".to_string())

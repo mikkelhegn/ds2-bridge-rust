@@ -1,6 +1,6 @@
 # DataStream2 Bridge
 
-This repository contains a collection of serverless functions to process DataStream2 logs.
+This repository contains a serverless functions to process DataStream2 logs.
 
 ## DataStream2 to Parquet
 
@@ -9,11 +9,6 @@ The `ds2-parquet` component is a function that converts DataStream2 logs to Parq
 To use it, you can make a HTTP POST request to the `/api/v1/transform/single` endpoint with a single DataStream2 log in the request body, or to the `/api/v1/transform/multiple` endpoint with an array of DataStream2 logs:
 
 First, either obtain or generate logs in the DataStream2 format.
-
-```bash
-$ python3 datastream2_generator.py
-# this can be used to generate a single log, or a file with multiple logs
-```
 
 Then, build and run the function:
 
